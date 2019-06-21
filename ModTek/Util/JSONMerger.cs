@@ -13,7 +13,9 @@ namespace ModTek.Util
     {
         private static bool IsAdvancedJSONMerge(JObject merge)
         {
-            return (merge[nameof(AdvancedJSONMerge.TargetID)] != null || merge[nameof(AdvancedJSONMerge.TargetIDs)] != null)
+            return (merge[nameof(AdvancedJSONMerge.TargetID)] != null
+                    || merge[nameof(AdvancedJSONMerge.TargetIDs)] != null
+                    || merge[nameof(AdvancedJSONMerge.TargetType)] != null)
                 && merge[nameof(AdvancedJSONMerge.Instructions)] != null;
         }
 
