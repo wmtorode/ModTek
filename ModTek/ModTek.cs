@@ -321,6 +321,21 @@ namespace ModTek
                 : null;
         }
 
+        private static List<VersionManifestEntry> GetAllEntriesByType(string type)
+        {
+            if (CustomResources.ContainsKey(type))
+                return CustomResources[type].Values.ToList();
+
+            var allEntries = new List<VersionManifestEntry>();
+
+            allEntries.AddRange(AddBTRLEntries.Where(e => e.Type == type)
+                .Select(e => e.GetVersionManifestEntry()));
+            allEntries.AddRange(CachedVersionManifest.FindAll(e => e.Type == type)
+                .Where(e => !RemoveBTRLEntries.Contains(e)));
+
+            return allEntries;
+        }
+
 
         // READING MODDEFs AND LOAD/INIT/FINISH MODS
         private static bool LoadMod(ModDef modDef)
@@ -935,15 +950,43 @@ namespace ModTek
                         {
                             var advancedJSONMerge = AdvancedJSONMerge.FromFile(modEntry.Path);
 
-                            if (!string.IsNullOrEmpty(advancedJSONMerge.TargetID) && advancedJSONMerge.TargetIDs == null)
-                                advancedJSONMerge.TargetIDs = new List<string>{advancedJSONMerge.TargetID};
+                            // handle targetType case where no IDs given
+                            if (string.IsNullOrEmpty(advancedJSONMerge.TargetID)
+                                && advancedJSONMerge.TargetID == null
+                                && !string.IsNullOrEmpty(advancedJSONMerge.TargetType))
+                            {
+                                var entries = GetAllEntriesByType(advancedJSONMerge.TargetType);
 
-                            if (advancedJSONMerge.TargetIDs == null || advancedJSONMerge.TargetIDs.Count == 0)
+                                if (entries == null || entries.Count == 0)
+                                {
+                                    Log($"\tError: AdvancedJSONMerge: \"{GetRelativePath(modEntry.Path, ModsDirectory)}\" specified a type with no entries. Skipping this merge.");
+                                    continue;
+                                }
+
+                                foreach (var entry in entries)
+                                {
+                                    AddMerge(entry.Type, entry.Id, modEntry.Path);
+                                    Log($"\tAdvancedJSONMerge: \"{GetRelativePath(modEntry.Path, ModsDirectory)}\" targeting '{entry.Id}' ({entry.Type})");
+                                }
+
+                                continue;
+                            }
+
+                            // handle targetID case by simply making it into targetIDs with single ID
+                            if (!string.IsNullOrEmpty(advancedJSONMerge.TargetID)
+                                && advancedJSONMerge.TargetIDs == null)
+                            {
+                                advancedJSONMerge.TargetIDs = new List<string>{advancedJSONMerge.TargetID};
+                            }
+
+                            if (advancedJSONMerge.TargetIDs == null
+                                || advancedJSONMerge.TargetIDs.Count == 0)
                             {
                                 Log($"\tError: AdvancedJSONMerge: \"{GetRelativePath(modEntry.Path, ModsDirectory)}\" didn't target any IDs. Skipping this merge.");
                                 continue;
                             }
 
+                            // handle targetIDs case
                             foreach (var id in advancedJSONMerge.TargetIDs)
                             {
                                 var type = advancedJSONMerge.TargetType;
