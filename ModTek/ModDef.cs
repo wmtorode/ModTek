@@ -83,6 +83,16 @@ namespace ModTek
         }
 
         /// <summary>
+        /// Creates a ModDef from a string
+        /// </summary>
+        public static ModDef CreateFromString(string data, string path)
+        {
+            var modDef = JsonConvert.DeserializeObject<ModDef>(data);
+            modDef.Directory = Path.GetDirectoryName(path);
+            return modDef;
+        }
+
+        /// <summary>
         /// Checks if all dependencies are present in param loaded
         /// </summary>
         public bool AreDependenciesResolved(IEnumerable<string> loaded)

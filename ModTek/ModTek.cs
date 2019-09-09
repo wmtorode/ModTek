@@ -15,6 +15,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using static ModTek.Util.Logger;
+using UnityEngine;
 
 namespace ModTek
 {
@@ -368,7 +369,7 @@ namespace ModTek
             foreach (var modEntry in modDef.Manifest)
             {
                 // handle prefabs; they have potential internal path to assetbundle
-                if (modEntry.Type == "Prefab" && !string.IsNullOrEmpty(modEntry.AssetBundleName))
+                if (!string.IsNullOrEmpty(modEntry.AssetBundleName))
                 {
                     if (!expandedManifest.Any(x => x.Type == "AssetBundle" && x.Id == modEntry.AssetBundleName))
                     {
@@ -411,6 +412,23 @@ namespace ModTek
                         {
                             var childModEntry = new ModEntry(modEntry, path, InferIDFromFile(filePath));
                             expandedManifest.Add(childModEntry);
+                            if (modEntry.Type == "AssetBundle" && modEntry.AssetBundleManifest)
+                            {
+                                var bundle = AssetBundle.LoadFromFile(filePath);
+                                if (bundle.Contains("assets/manifestdata/modtekmanifest.json"))
+                                {
+                                    string data = bundle.LoadAsset("assets/manifestdata/modtekmanifest.json").ToString();
+                                    var realModDef = ModDef.CreateFromString(data, path);
+                                    foreach(var entry in realModDef.Manifest)
+                                    {
+                                        entry.AssetBundleName = childModEntry.Id;
+                                        entry.Id = Path.GetFileNameWithoutExtension(entry.Path);
+                                        if (!FileIsOnDenyList(entry.Path))
+                                            expandedManifest.Add(entry);
+                                    }
+                                }
+                                bundle.Unload(false);
+                            }
                         }
                         catch (Exception e)
                         {
@@ -427,6 +445,23 @@ namespace ModTek
                         modEntry.Id = modEntry.Id ?? InferIDFromFile(entryPath);
                         modEntry.Path = entryPath;
                         expandedManifest.Add(modEntry);
+                        if (modEntry.Type == "AssetBundle" && modEntry.AssetBundleManifest)
+                        {
+                            var bundle = AssetBundle.LoadFromFile(entryPath);
+                            if (bundle.Contains("assets/manifestdata/modtekmanifest.json"))
+                            {
+                                string data = bundle.LoadAsset("assets/manifestdata/modtekmanifest.json").ToString();
+                                var realModDef = ModDef.CreateFromString(data, entryPath);
+                                foreach (var entry in realModDef.Manifest)
+                                {
+                                    entry.AssetBundleName = modEntry.Id;
+                                    entry.Id = Path.GetFileNameWithoutExtension(entry.Path);
+                                    if (!FileIsOnDenyList(entry.Path))
+                                        expandedManifest.Add(entry);
+                                }
+                            }
+                            bundle.Unload(false);
+                        }
                     }
                     catch (Exception e)
                     {
