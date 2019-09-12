@@ -22,7 +22,6 @@ namespace ModTek
             Type = parent.Type;
             AssetBundleName = parent.AssetBundleName;
             AssetBundlePersistent = parent.AssetBundlePersistent;
-            AssetBundleManifest = parent.AssetBundleManifest;
             ShouldMergeJSON = parent.ShouldMergeJSON;
             ShouldAppendText = parent.ShouldAppendText;
             AddToAddendum = parent.AddToAddendum;

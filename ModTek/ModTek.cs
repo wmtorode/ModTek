@@ -266,14 +266,21 @@ namespace ModTek
         {
             return IGNORE_LIST.Any(x => filePath.EndsWith(x, StringComparison.InvariantCultureIgnoreCase));
         }
-
         internal static JObject ParseGameJSONFile(string path)
         {
             if (cachedJObjects.ContainsKey(path))
                 return cachedJObjects[path];
 
+            return ParseGameJSONData(File.ReadAllText(path), path);
+
+        }
+
+
+        internal static JObject ParseGameJSONData(string data, string path)
+        {
+            
             // because StripHBSCommentsFromJSON is private, use Harmony to call the method
-            var commentsStripped = Traverse.Create(typeof(JSONSerializationUtility)).Method("StripHBSCommentsFromJSON", File.ReadAllText(path)).GetValue<string>();
+            var commentsStripped = Traverse.Create(typeof(JSONSerializationUtility)).Method("StripHBSCommentsFromJSON", data).GetValue<string>();
 
             if (commentsStripped == null)
                 throw new Exception("StripHBSCommentsFromJSON returned null.");
@@ -305,6 +312,13 @@ namespace ModTek
 
             // read the json and get ID out of it if able to
             return InferIDFromJObject(ParseGameJSONFile(path)) ?? Path.GetFileNameWithoutExtension(path);
+        }
+
+        private static string InferIDFromData(string path, string data)
+        {
+ 
+            // read the json and get ID out of it if able to
+            return InferIDFromJObject(ParseGameJSONData(data, path)) ?? Path.GetFileNameWithoutExtension(path);
         }
 
         private static VersionManifestEntry FindEntry(string type, string id)
@@ -414,20 +428,11 @@ namespace ModTek
                             expandedManifest.Add(childModEntry);
                             if (modEntry.Type == "AssetBundle" && modEntry.AssetBundleManifest)
                             {
-                                var bundle = AssetBundle.LoadFromFile(filePath);
-                                if (bundle.Contains("assets/manifestdata/modtekmanifest.json"))
+                                var assetManfiest = LoadAssetBundleManifest(childModEntry);
+                                foreach (var entry in assetManfiest)
                                 {
-                                    string data = bundle.LoadAsset("assets/manifestdata/modtekmanifest.json").ToString();
-                                    var realModDef = ModDef.CreateFromString(data, path);
-                                    foreach(var entry in realModDef.Manifest)
-                                    {
-                                        entry.AssetBundleName = childModEntry.Id;
-                                        entry.Id = Path.GetFileNameWithoutExtension(entry.Path);
-                                        if (!FileIsOnDenyList(entry.Path))
-                                            expandedManifest.Add(entry);
-                                    }
+                                    expandedManifest.Add(entry);
                                 }
-                                bundle.Unload(false);
                             }
                         }
                         catch (Exception e)
@@ -447,20 +452,11 @@ namespace ModTek
                         expandedManifest.Add(modEntry);
                         if (modEntry.Type == "AssetBundle" && modEntry.AssetBundleManifest)
                         {
-                            var bundle = AssetBundle.LoadFromFile(entryPath);
-                            if (bundle.Contains("assets/manifestdata/modtekmanifest.json"))
+                            var assetManfiest = LoadAssetBundleManifest(modEntry);
+                            foreach (var entry in assetManfiest)
                             {
-                                string data = bundle.LoadAsset("assets/manifestdata/modtekmanifest.json").ToString();
-                                var realModDef = ModDef.CreateFromString(data, entryPath);
-                                foreach (var entry in realModDef.Manifest)
-                                {
-                                    entry.AssetBundleName = modEntry.Id;
-                                    entry.Id = Path.GetFileNameWithoutExtension(entry.Path);
-                                    if (!FileIsOnDenyList(entry.Path))
-                                        expandedManifest.Add(entry);
-                                }
+                                expandedManifest.Add(entry);
                             }
-                            bundle.Unload(false);
                         }
                     }
                     catch (Exception e)
@@ -477,6 +473,39 @@ namespace ModTek
             }
 
             return expandedManifest;
+        }
+
+        private static List<ModEntry> LoadAssetBundleManifest(ModEntry modEntry)
+        {
+            var expandedManifest = new List<ModEntry>();
+            var assetBundle = AssetBundle.LoadFromFile(modEntry.Path);
+            var assetList = assetBundle.GetAllAssetNames();
+            string manifest = assetList.FirstOrDefault(s => s.EndsWith("modtekmanifest.json"));
+            if (!String.IsNullOrEmpty(manifest))
+            {
+                string data = assetBundle.LoadAsset(manifest).ToString();
+                var assetModDef = ModDef.CreateFromString(data, modEntry.Path);
+                Log("Hit This Spot!");
+                foreach (var entry in assetModDef.Manifest)
+                {
+
+                    entry.AssetBundleName = modEntry.Id;
+                    Log("Processing an entry!");
+                    var entries = Array.FindAll(assetList, s => s.StartsWith(entry.Path));
+                    foreach (var item in entries)
+                    {
+                        Log("Processing an item!");
+                        data = assetBundle.LoadAsset(item).ToString();
+                        var childModEntry = new ModEntry(entry, item, InferIDFromData(item, data));
+                        if (!FileIsOnDenyList(childModEntry.Path))
+                            expandedManifest.Add(childModEntry);
+
+                    }
+                }
+            }
+            assetBundle.Unload(false);
+            return expandedManifest;
+
         }
 
         private static bool LoadAssemblyAndCallInit(ModDef modDef)
