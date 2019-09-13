@@ -485,16 +485,19 @@ namespace ModTek
             {
                 string data = assetBundle.LoadAsset(manifest).ToString();
                 var assetModDef = ModDef.CreateFromString(data, modEntry.Path);
-                Log("Hit This Spot!");
                 foreach (var entry in assetModDef.Manifest)
                 {
 
                     entry.AssetBundleName = modEntry.Id;
-                    Log("Processing an entry!");
+
+                    // paths in the assetbundles start assets/
+                    if (!entry.Path.StartsWith("assets/"))
+                    {
+                        entry.Path = "assets/" + entry.Path;
+                    }
                     var entries = Array.FindAll(assetList, s => s.StartsWith(entry.Path));
                     foreach (var item in entries)
                     {
-                        Log("Processing an item!");
                         data = assetBundle.LoadAsset(item).ToString();
                         var childModEntry = new ModEntry(entry, item, InferIDFromData(item, data));
                         if (!FileIsOnDenyList(childModEntry.Path))
