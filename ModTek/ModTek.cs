@@ -278,7 +278,10 @@ namespace ModTek
 
         internal static JObject ParseGameJSONData(string data, string path)
         {
-            
+
+            if (cachedJObjects.ContainsKey(path))
+                return cachedJObjects[path];
+
             // because StripHBSCommentsFromJSON is private, use Harmony to call the method
             var commentsStripped = Traverse.Create(typeof(JSONSerializationUtility)).Method("StripHBSCommentsFromJSON", data).GetValue<string>();
 
@@ -473,6 +476,9 @@ namespace ModTek
                 {
 
                     entry.AssetBundleName = modEntry.Id;
+
+                    // not sure how to deal with this yet and not sure its needed
+                    entry.AddToDB = false;
 
                     // paths in the assetbundles start assets/
                     if (!entry.Path.StartsWith("assets/"))
