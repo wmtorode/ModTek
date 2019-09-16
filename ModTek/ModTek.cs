@@ -308,6 +308,16 @@ namespace ModTek
             return InferIDFromJObject(ParseGameJSONData(data, path)) ?? Path.GetFileNameWithoutExtension(path);
         }
 
+        private static string InferIDFromJObject(JObject jObj)
+        {
+            if (jObj == null)
+                return null;
+
+            // go through the different kinds of id storage in JSONs
+            string[] jPaths = { "Description.Id", "id", "Id", "ID", "identifier", "Identifier" };
+            return jPaths.Select(jPath => (string)jObj.SelectToken(jPath)).FirstOrDefault(id => id != null);
+        }
+
         private static VersionManifestEntry FindEntry(string type, string id)
         {
             if (CustomResources.ContainsKey(type) && CustomResources[type].ContainsKey(id))
