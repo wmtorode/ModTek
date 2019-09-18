@@ -425,7 +425,7 @@ namespace ModTek
                             expandedManifest.Add(childModEntry);
                             if (modEntry.Type == "AssetBundle" && modEntry.AssetBundleManifest)
                             {
-                                var assetManfiest = LoadAssetBundleManifest(childModEntry);
+                                var assetManfiest = LoadAssetBundleManifest(childModEntry, modDef);
                                 foreach (var entry in assetManfiest)
                                 {
                                     expandedManifest.Add(entry);
@@ -449,7 +449,7 @@ namespace ModTek
                         expandedManifest.Add(modEntry);
                         if (modEntry.Type == "AssetBundle" && modEntry.AssetBundleManifest)
                         {
-                            var assetManfiest = LoadAssetBundleManifest(modEntry);
+                            var assetManfiest = LoadAssetBundleManifest(modEntry, modDef);
                             foreach (var entry in assetManfiest)
                             {
                                 expandedManifest.Add(entry);
@@ -472,7 +472,7 @@ namespace ModTek
             return expandedManifest;
         }
 
-        private static List<ModEntry> LoadAssetBundleManifest(ModEntry modEntry)
+        private static List<ModEntry> LoadAssetBundleManifest(ModEntry modEntry, ModDef modDef)
         {
             var expandedManifest = new List<ModEntry>();
             var assetBundle = AssetBundle.LoadFromFile(modEntry.Path);
@@ -482,6 +482,12 @@ namespace ModTek
             {
                 string data = assetBundle.LoadAsset(manifest).ToString();
                 var assetModDef = ModDef.CreateFromString(data, modEntry.Path);
+                if(assetModDef.Settings.HasValues)
+                {
+                    Log($"\tInfo: Found Mod settings in bundle, overwriting modDef settings");
+                    modDef.Settings = assetModDef.Settings;
+
+                }
                 foreach (var entry in assetModDef.Manifest)
                 {
 
