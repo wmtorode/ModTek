@@ -511,6 +511,14 @@ namespace ModTek
 
                     }
                 }
+                foreach (var extract in assetModDef.Extracts)
+                {
+                    data = assetBundle.LoadAsset(extract.Path).ToString();
+                    using (StreamWriter writer = new StreamWriter(modDef.Directory + "/" + extract.Target, false))
+                    {
+                        writer.WriteLine(data);
+                    }
+                }
             }
             assetBundle.Unload(false);
             return expandedManifest;

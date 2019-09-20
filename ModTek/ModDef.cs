@@ -65,6 +65,8 @@ namespace ModTek
         // manifest, for including any kind of things to add to the game's manifest
         public List<ModEntry> Manifest { get; set; } = new List<ModEntry>();
 
+        public List<ModExtract> Extracts { get; set; } = new List<ModExtract>();
+
         // remove these entries by ID from the game
         public List<string> RemoveManifestEntries { get; set; } = new List<string>();
 
