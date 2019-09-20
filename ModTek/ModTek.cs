@@ -373,6 +373,7 @@ namespace ModTek
         {
             // note: if a JSON has errors, this mod will not load, since InferIDFromFile will throw from parsing the JSON
             var expandedManifest = new List<ModEntry>();
+            int looseEntriesCount = 0;
 
             if (modDef.LoadImplicitManifest && modDef.Manifest.All(x => Path.GetFullPath(Path.Combine(modDef.Directory, x.Path)) != Path.GetFullPath(Path.Combine(modDef.Directory, "StreamingAssets"))))
                 modDef.Manifest.Add(new ModEntry("StreamingAssets", true));
@@ -431,6 +432,10 @@ namespace ModTek
                                     expandedManifest.Add(entry);
                                 }
                             }
+                            else
+                            {
+                                looseEntriesCount++;
+                            }
                         }
                         catch (Exception e)
                         {
@@ -455,6 +460,10 @@ namespace ModTek
                                 expandedManifest.Add(entry);
                             }
                         }
+                        else
+                        {
+                            looseEntriesCount++;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -469,6 +478,7 @@ namespace ModTek
                 }
             }
 
+            Log($"\t{looseEntriesCount} Non-assetbundle manifest entries");
             return expandedManifest;
         }
 
@@ -513,8 +523,12 @@ namespace ModTek
                 }
                 foreach (var extract in assetModDef.Extracts)
                 {
+                    if (!extract.Path.StartsWith("assets/"))
+                    {
+                        extract.Path = "assets/" + extract.Path;
+                    }
                     data = assetBundle.LoadAsset(extract.Path).ToString();
-                    using (StreamWriter writer = new StreamWriter(modDef.Directory + "/" + extract.Target, false))
+                    using (StreamWriter writer = new StreamWriter(Path.GetFullPath(Path.Combine(modDef.Directory, extract.Target)), false))
                     {
                         writer.WriteLine(data);
                     }
